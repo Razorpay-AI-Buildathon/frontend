@@ -89,7 +89,7 @@ export default function Dashboard() {
   const [metrics, setMetrics] = useState<Metrics | null>(null);
   const [cases, setCases] = useState<Case[]>([]);
   const [selectedCaseId, setSelectedCaseId] = useState<string | null>(null);
-  const [caseDetail, setCaseDetail] = useState<CaseDetail | null>(null);
+  const [caseDetail, setCaseDetail] = useState<any | null>(null);
   
   // API Key inputs (no hardcoded credentials)
   const [apiKeyInput, setApiKeyInput] = useState<string>("");
@@ -105,6 +105,9 @@ export default function Dashboard() {
   
   const [page, setPage] = useState<number>(1);
   const [totalPages, setTotalPages] = useState<number>(1);
+
+  const [reviewNotes, setReviewNotes] = useState<string>("");
+  const [simulatingPayment, setSimulatingPayment] = useState<boolean>(false);
 
   // Dynamic API base URL configuration
   const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
@@ -276,6 +279,113 @@ export default function Dashboard() {
     setPage(1);
   };
 
+  const handleSimulatePayment = async () => {
+    if (!activeApiKey) {
+      alert("Please enter and apply the API key first.");
+      return;
+    }
+    setSimulatingPayment(true);
+    setErrorMessage("");
+    try {
+      const eventId = `evt-${Math.random().toString(36).substr(2, 9)}`;
+      const customerId = `cust-${Math.random().toString(36).substr(2, 6)}`;
+      const providerEventId = `pay_${Math.random().toString(36).substr(2, 9)}`;
+      
+      const payload = {
+        event_id: eventId,
+        merchant_id: "merchant_1",
+        customer_id: customerId,
+        event_type: "FAILED_PAYMENT",
+        amount: Math.floor(Math.random() * 4000) + 1000,
+        currency: "INR",
+        failure_code: Math.random() > 0.5 ? "insufficient_funds" : "expired_card",
+        provider: "razorpay",
+        provider_event_id: providerEventId,
+        metadata: {
+          customer_email: `customer-${customerId}@example.com`,
+          urgency_factor: 1.2
+        }
+      };
+
+      const res = await fetch(`${API_BASE_URL}/api/events/payment`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-API-Key": activeApiKey
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        throw new Error(`Simulation failed: HTTP ${res.status}`);
+      }
+
+      const data = await res.json();
+      setSelectedCaseId(data.case_id);
+      setPage(1);
+      
+      setTimeout(() => {
+        setPage(p => p);
+        fetch(`${API_BASE_URL}/api/metrics`, { headers: { "X-API-Key": activeApiKey } })
+          .then(r => r.json()).then(m => setMetrics(m)).catch(console.error);
+      }, 800);
+
+    } catch (err: any) {
+      setErrorMessage(err.message || "Failed to simulate payment.");
+    } finally {
+      setSimulatingPayment(false);
+    }
+  };
+
+  const handleReviewAction = async (action: "APPROVE" | "REJECT" | "CLOSE") => {
+    if (!selectedCaseId || !activeApiKey) return;
+    setErrorMessage("");
+    try {
+      const payload = {
+        action: action,
+        operator_id: "operator_dashboard",
+        notes: reviewNotes
+      };
+
+      const res = await fetch(`${API_BASE_URL}/api/cases/${selectedCaseId}/review`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-API-Key": activeApiKey
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const errData = await res.json();
+        throw new Error(errData.detail || `Review failed: HTTP ${res.status}`);
+      }
+
+      setReviewNotes("");
+      
+      const detailRes = await fetch(`${API_BASE_URL}/api/cases/${selectedCaseId}`, {
+        headers: { "X-API-Key": activeApiKey }
+      });
+      if (detailRes.ok) {
+        const detailData = await detailRes.json();
+        setCaseDetail(detailData);
+      }
+      
+      setPage(p => p);
+      
+      const metricsRes = await fetch(`${API_BASE_URL}/api/metrics`, {
+        headers: { "X-API-Key": activeApiKey }
+      });
+      if (metricsRes.ok) {
+        const metricsData = await metricsRes.json();
+        setMetrics(metricsData);
+      }
+
+    } catch (err: any) {
+      setErrorMessage(err.message || "Failed to submit human review.");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col font-sans">
       {/* Header bar */}
@@ -289,31 +399,44 @@ export default function Dashboard() {
         </div>
 
         {/* Api key control form to prevent keystroke requests */}
-        <form onSubmit={handleApplyApiKey} className="flex items-center gap-2 w-full md:w-auto">
-          <div className="flex items-center gap-2 bg-background border border-border-beige rounded px-3 py-1.5 w-full md:w-auto">
-            <Lock size={14} className="text-plum" />
-            <input 
-              type={showApiKey ? "text" : "password"} 
-              value={apiKeyInput} 
-              onChange={(e) => setApiKeyInput(e.target.value)}
-              className="bg-transparent text-xs font-mono border-none focus:outline-none w-40 text-foreground"
-              placeholder="Enter Server API Key..."
-            />
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto">
+          <form onSubmit={handleApplyApiKey} className="flex items-center gap-2 w-full sm:w-auto">
+            <div className="flex items-center gap-2 bg-background border border-border-beige rounded px-3 py-1.5 w-full md:w-auto">
+              <Lock size={14} className="text-plum" />
+              <input 
+                type={showApiKey ? "text" : "password"} 
+                value={apiKeyInput} 
+                onChange={(e) => setApiKeyInput(e.target.value)}
+                className="bg-transparent text-xs font-mono border-none focus:outline-none w-40 text-foreground"
+                placeholder="Enter Server API Key..."
+              />
+              <button 
+                type="button"
+                onClick={() => setShowApiKey(!showApiKey)}
+                className="text-plum hover:text-foreground transition-colors"
+              >
+                {showApiKey ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
             <button 
-              type="button"
-              onClick={() => setShowApiKey(!showApiKey)}
-              className="text-plum hover:text-foreground transition-colors"
+              type="submit"
+              className="px-3 py-1.5 bg-accent hover:bg-accent/80 transition-colors text-xs font-mono rounded font-medium text-white"
             >
-              {showApiKey ? <EyeOff size={14} /> : <Eye size={14} />}
+              Apply
             </button>
-          </div>
-          <button 
-            type="submit"
-            className="px-3 py-1.5 bg-accent hover:bg-accent/80 transition-colors text-xs font-mono rounded font-medium text-white"
-          >
-            Apply
-          </button>
-        </form>
+          </form>
+
+          {activeApiKey && (
+            <button
+              onClick={handleSimulatePayment}
+              disabled={simulatingPayment}
+              className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 transition-colors text-xs font-mono rounded font-semibold text-white flex items-center gap-1.5"
+            >
+              <Sparkles size={13} />
+              {simulatingPayment ? "Simulating..." : "Simulate Failed Payment"}
+            </button>
+          )}
+        </div>
       </header>
 
       {/* Main console content */}
@@ -535,6 +658,44 @@ export default function Dashboard() {
                   </div>
                 </div>
 
+                {/* Human Review Console */}
+                {caseDetail.status === "HUMAN_REVIEW" && (
+                  <div className="bg-card-bg border border-amber-500/30 p-4 rounded space-y-3 bg-amber-500/5">
+                    <p className="text-xs font-semibold text-amber-400 flex items-center gap-1.5 uppercase font-mono tracking-wider">
+                      <AlertCircle size={13} /> Pending Operator Decision
+                    </p>
+                    <div className="space-y-3">
+                      <textarea
+                        value={reviewNotes}
+                        onChange={(e) => setReviewNotes(e.target.value)}
+                        placeholder="Enter justification notes or override audit trail comments here..."
+                        className="w-full bg-background border border-border-beige rounded p-2 text-xs text-foreground focus:outline-none focus:border-accent-light"
+                        rows={2}
+                      />
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => handleReviewAction("APPROVE")}
+                          className="flex-1 py-2 bg-emerald-600 hover:bg-emerald-500 transition-colors text-white rounded text-xs font-bold font-mono tracking-wide uppercase"
+                        >
+                          Approve
+                        </button>
+                        <button
+                          onClick={() => handleReviewAction("REJECT")}
+                          className="flex-1 py-2 bg-rose-600 hover:bg-rose-500 transition-colors text-white rounded text-xs font-bold font-mono tracking-wide uppercase"
+                        >
+                          Reject
+                        </button>
+                        <button
+                          onClick={() => handleReviewAction("CLOSE")}
+                          className="flex-1 py-2 bg-slate-600 hover:bg-slate-500 transition-colors text-white rounded text-xs font-bold font-mono tracking-wide uppercase"
+                        >
+                          Close
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* Token authorizations list displaying action_id, execution_id, and masked token values */}
                 {caseDetail.actions.length > 0 && (
                   <div className="bg-card-bg border border-border-beige p-4 rounded space-y-3">
@@ -542,7 +703,7 @@ export default function Dashboard() {
                       <Lock size={12} className="text-accent" /> Security Authorizations
                     </p>
                     <div className="space-y-3">
-                      {caseDetail.actions.map(action => (
+                      {caseDetail.actions.map((action: any) => (
                         <div key={action.id} className="text-[11px] bg-background border border-border-beige p-3 rounded font-mono space-y-2">
                           <div className="flex justify-between">
                             <span className="text-foreground font-semibold">{action.action_type}</span>
@@ -578,39 +739,72 @@ export default function Dashboard() {
                 )}
 
                 {/* Audit trail / Provenance trace */}
-                {caseDetail.audit_log.length > 0 && (
+                {((caseDetail.audit_events && caseDetail.audit_events.length > 0) || (caseDetail.audit_log && caseDetail.audit_log.length > 0)) && (
                   <div className="bg-card-bg border border-border-beige p-4 rounded space-y-3">
                     <p className="text-[11px] font-mono uppercase tracking-wider text-plum flex items-center gap-1.5">
                       <Sparkles size={12} className="text-accent" /> Append-Only Audit Log
                     </p>
                     
                     <div className="space-y-4 relative border-l border-border-beige pl-4 ml-2">
-                      {caseDetail.audit_log.map((log, idx) => (
-                        <div key={idx} className="relative text-xs space-y-1 animate-fade-in">
-                          {/* Dot indicator */}
-                          <span className="absolute -left-[21px] top-1.5 w-2 h-2 rounded-full bg-accent border-2 border-card-bg" />
-                          
-                          <div className="flex justify-between items-baseline">
-                            <span className="font-semibold text-foreground uppercase text-[10px] font-mono tracking-wider">
-                              {log.node} : {log.event}
-                            </span>
-                            <span className="text-[9px] font-mono text-plum">
-                              {new Date(log.timestamp).toLocaleTimeString()}
-                            </span>
-                          </div>
+                      {caseDetail.audit_events && caseDetail.audit_events.length > 0 ? (
+                        caseDetail.audit_events.map((log: any) => (
+                          <div key={log.id} className="relative text-xs space-y-1.5 animate-fade-in">
+                            <span className="absolute -left-[21px] top-1.5 w-2 h-2 rounded-full bg-accent border-2 border-card-bg" />
+                            
+                            <div className="flex justify-between items-baseline">
+                              <span className="font-semibold text-foreground uppercase text-[10px] font-mono tracking-wider">
+                                {log.event_type}
+                              </span>
+                              <span className="text-[9px] font-mono text-plum">
+                                {new Date(log.timestamp).toLocaleTimeString()}
+                              </span>
+                            </div>
 
-                          {log.decision_source && (
-                            <div className="text-[10px] text-plum font-mono space-y-0.5 bg-background border border-border-beige/50 p-2 rounded">
+                            <div className="text-[10px] text-plum font-mono space-y-1 bg-background border border-border-beige/50 p-2 rounded">
                               <div className="flex justify-between">
                                 <span>SOURCE: {log.decision_source}</span>
-                                <span>MODEL: {log.model || "N/A"}</span>
+                                <span>ACTOR: {log.actor}</span>
                               </div>
-                              {log.playbook_id && <div>PLAYBOOK: {log.playbook_id}</div>}
-                              {log.request_id && <div className="truncate">REQUEST ID: {log.request_id}</div>}
+                              {log.metadata_json && Object.keys(log.metadata_json).length > 0 && (
+                                <div className="text-[9px] text-slate-400 mt-1 border-t border-border-beige/25 pt-1 overflow-x-auto whitespace-pre-wrap font-sans">
+                                  {log.metadata_json.notes && <div className="font-medium text-foreground">Notes: {log.metadata_json.notes}</div>}
+                                  {log.metadata_json.operator_id && <div>Operator: {log.metadata_json.operator_id}</div>}
+                                  {log.metadata_json.violations && <div>Violations: {JSON.stringify(log.metadata_json.violations)}</div>}
+                                  {!log.metadata_json.notes && !log.metadata_json.operator_id && !log.metadata_json.violations && (
+                                    <div>{JSON.stringify(log.metadata_json)}</div>
+                                  )}
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                      ))}
+                          </div>
+                        ))
+                      ) : (
+                        caseDetail.audit_log.map((log: any, idx: number) => (
+                          <div key={idx} className="relative text-xs space-y-1 animate-fade-in">
+                            <span className="absolute -left-[21px] top-1.5 w-2 h-2 rounded-full bg-accent border-2 border-card-bg" />
+                            
+                            <div className="flex justify-between items-baseline">
+                              <span className="font-semibold text-foreground uppercase text-[10px] font-mono tracking-wider">
+                                {log.node} : {log.event}
+                              </span>
+                              <span className="text-[9px] font-mono text-plum">
+                                {new Date(log.timestamp).toLocaleTimeString()}
+                              </span>
+                            </div>
+
+                            {log.decision_source && (
+                              <div className="text-[10px] text-plum font-mono space-y-0.5 bg-background border border-border-beige/50 p-2 rounded">
+                                <div className="flex justify-between">
+                                  <span>SOURCE: {log.decision_source}</span>
+                                  <span>MODEL: {log.model || "N/A"}</span>
+                                </div>
+                                {log.playbook_id && <div>PLAYBOOK: {log.playbook_id}</div>}
+                                {log.request_id && <div className="truncate">REQUEST ID: {log.request_id}</div>}
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
                     </div>
                   </div>
                 )}
