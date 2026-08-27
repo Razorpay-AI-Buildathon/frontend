@@ -233,6 +233,60 @@ export default function Dashboard() {
     return () => controller.abort();
   }, [selectedCaseId, activeApiKey, API_BASE_URL]);
 
+  // Listen for real-time SSE updates
+  useEffect(() => {
+    if (!activeApiKey) return;
+
+    const eventSource = new EventSource(`${API_BASE_URL}/api/cases/stream`);
+
+    eventSource.addEventListener("case_updated", (event) => {
+      try {
+        const update = JSON.parse(event.data);
+        
+        // Update status of existing case in the queue list
+        setCases(prevCases => 
+          prevCases.map(c => 
+            c.case_id === update.case_id ? { ...c, status: update.status } : c
+          )
+        );
+
+        // If the updated case is currently selected, refresh its details
+        setSelectedCaseId(currId => {
+          if (currId === update.case_id) {
+            fetch(`${API_BASE_URL}/api/cases/${update.case_id}`, {
+              headers: { "X-API-Key": activeApiKey }
+            })
+              .then(res => {
+                if (res.ok) return res.json();
+                throw new Error("Failed to load details");
+              })
+              .then(data => setCaseDetail(data))
+              .catch(console.error);
+          }
+          return currId;
+        });
+
+        // Refresh metrics
+        fetch(`${API_BASE_URL}/api/metrics`, {
+          headers: { "X-API-Key": activeApiKey }
+        })
+          .then(res => {
+            if (res.ok) return res.json();
+            throw new Error("Failed to load metrics");
+          })
+          .then(data => setMetrics(data))
+          .catch(console.error);
+
+      } catch (err) {
+        console.error("Error parsing real-time case update:", err);
+      }
+    });
+
+    return () => {
+      eventSource.close();
+    };
+  }, [activeApiKey, API_BASE_URL]);
+
   const getRiskColor = (score: number) => {
     if (score < 40) return "text-emerald-400 bg-emerald-500/10 border-emerald-500/20";
     if (score < 70) return "text-amber-400 bg-amber-500/10 border-amber-500/20";
