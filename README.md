@@ -24,3 +24,36 @@ Next.js-based real-time observability dashboard for tracking payment recovery ca
    pnpm run dev
    ```
 3. Open [http://localhost:3000](http://localhost:3000) and enter `RECOVERAI-TESTKEY-12345` as the Server API Key to unlock cases.
+
+## User Interface Flow
+
+The following diagram illustrates the primary pages of the RecoverAI dashboard, their purpose, and how users navigate between them.
+
+```mermaid
+graph TD
+    %% Base Nodes
+    Login["/login<br/>Authentication & API Key"]
+    Sidebar["Main Navigation Sidebar"]
+    
+    %% Pages
+    Overview["/overview<br/>High-level Metrics & Recovery KPIs"]
+    Cases["/recovery<br/>Live Feed of Payment Failures"]
+    CaseDetail["/recovery/[case_id]<br/>Case Timeline, AI Audit, Execution"]
+    HumanReview["/human-review<br/>ActionGuard Escalation Approval"]
+    Analytics["/analytics<br/>Performance & Strategy Breakdown"]
+    Strategies["/strategies<br/>(Beta) AI Playbook Config"]
+    Audit["/audit<br/>(Beta) System Security Log"]
+
+    %% Flow
+    Login -->|API Key Validated| Sidebar
+    
+    Sidebar --> Overview
+    Sidebar --> Cases
+    Sidebar --> HumanReview
+    Sidebar --> Analytics
+    Sidebar --> Strategies
+    Sidebar --> Audit
+    
+    Cases -->|Click on specific case| CaseDetail
+    HumanReview -->|Approves/Rejects| CaseDetail
+```

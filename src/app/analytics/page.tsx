@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import {
   Box,
   Heading,
@@ -109,6 +110,27 @@ export default function AnalyticsPage() {
                 >
                   <Heading size="medium">Strategy Breakdown</Heading>
                 </Box>
+                
+                {/* Graphs Section */}
+                <Box padding="spacing.6" borderBottomWidth="thin" borderBottomColor="surface.border.gray.muted">
+                  <div style={{ width: '100%', height: 300 }}>
+                    <ResponsiveContainer>
+                      <BarChart
+                        data={strategies}
+                        margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
+                        <XAxis dataKey="strategy" axisLine={false} tickLine={false} tickFormatter={(val) => val.replace(/_/g, " ")} style={{ fontSize: '12px', fill: '#64748B' }} />
+                        <YAxis axisLine={false} tickLine={false} style={{ fontSize: '12px', fill: '#64748B' }} />
+                        <Tooltip cursor={{ fill: '#F1F5F9' }} contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }} />
+                        <Legend wrapperStyle={{ paddingTop: '20px' }} />
+                        <Bar dataKey="attempts" name="Total Attempts" fill="#94A3B8" radius={[4, 4, 0, 0]} barSize={40} />
+                        <Bar dataKey="recovered" name="Successfully Recovered" fill="#10B981" radius={[4, 4, 0, 0]} barSize={40} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                </Box>
+
                 {strategies.map((s, i) => (
                   <Box key={s.strategy}>
                     {i > 0 && <Divider />}

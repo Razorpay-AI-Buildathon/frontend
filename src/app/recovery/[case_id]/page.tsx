@@ -16,6 +16,7 @@ import { ArrowLeft, Circle, Check, X } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import { API, DEFAULT_API_KEY, formatINR, STATUS_COLOR, FAILURE_LABELS, timeAgo } from "@/lib/api";
 import { useSSE } from "@/lib/sse";
+import { motion } from "framer-motion";
 
 interface AuditEntry {
   timestamp: string;
@@ -67,6 +68,7 @@ export default function CaseDetailPage() {
   const [caseData, setCaseData] = useState<CaseDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [auditPage, setAuditPage] = useState(0);
   
   const loadCase = useCallback(async () => {
     try {
@@ -91,8 +93,15 @@ export default function CaseDetailPage() {
   });
 
   const latestAction = caseData?.actions?.[caseData.actions.length - 1];
-  const currentStepIndex = STATUS_STEPS.indexOf(caseData?.status || "");
-
+  let currentStepIndex = STATUS_STEPS.indexOf(caseData?.status || "");
+  if (currentStepIndex === -1 && caseData?.audit_log) {
+    const traversedIndices = caseData.audit_log
+      .map(log => STATUS_STEPS.indexOf(log.decision || ""))
+      .filter(idx => idx !== -1);
+    if (traversedIndices.length > 0) {
+      currentStepIndex = Math.max(...traversedIndices);
+    }
+  }
   return (
     <AppShell>
       <Box padding="spacing.8">
@@ -206,52 +215,73 @@ export default function CaseDetailPage() {
                   {STATUS_STEPS.map((step, i) => {
                     const reached = currentStepIndex >= i;
                     const active = currentStepIndex === i;
-                    const failed = caseData.status === "FAILED" || caseData.status === "BLOCKED";
+                    const isTerminalException = ["FAILED", "BLOCKED", "CLOSED"].includes(caseData.status);
+                    const isWarning = caseData.status === "HUMAN_REVIEW";
                     return (
-                      <Box key={step} display="flex" alignItems="flex-start" gap="spacing.4" paddingY="spacing.3">
-                        <Box
-                          width="28px"
-                          height="28px"
-                          borderRadius="round"
-                          display="flex"
-                          alignItems="center"
-                          justifyContent="center"
-                          backgroundColor={
-                            active && failed ? "feedback.background.negative.intense" :
-                            active ? "feedback.background.information.intense" :
-                            reached ? "feedback.background.positive.intense" :
-                            "surface.background.gray.intense"
-                          }
-                          flexShrink={0}
-                        >
-                          <Box display="flex" alignItems="center" justifyContent="center">
-                            {reached ? (active ? <Circle size={12} fill="white" color="white" /> : <Check size={14} color="white" strokeWidth={3} />) : <Text size="xsmall" color="surface.text.staticWhite.normal" weight="semibold">{String(i + 1)}</Text>}
+                      <motion.div
+                        key={step}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.1, duration: 0.3 }}
+                      >
+                        <Box display="flex" alignItems="flex-start" gap="spacing.4" paddingY="spacing.3">
+                          <Box
+                            width="28px"
+                            height="28px"
+                            borderRadius="round"
+                            display="flex"
+                            alignItems="center"
+                            justifyContent="center"
+                            backgroundColor={
+                              active && isTerminalException ? "feedback.background.negative.intense" :
+                              active && isWarning ? "feedback.background.notice.intense" :
+                              active ? "feedback.background.information.intense" :
+                              reached ? "feedback.background.positive.intense" :
+                              "surface.background.gray.intense"
+                            }
+                            flexShrink={0}
+                          >
+                            <Box display="flex" alignItems="center" justifyContent="center">
+                              {reached ? (active ? <Circle size={12} fill="white" color="white" /> : <Check size={14} color="white" strokeWidth={3} />) : <Text size="xsmall" color="surface.text.staticWhite.normal" weight="semibold">{String(i + 1)}</Text>}
+                            </Box>
+                          </Box>
+                          <Box>
+                            <Text
+                              size="small"
+                              weight={active ? "semibold" : "regular"}
+                              color={reached ? "surface.text.gray.normal" : "surface.text.gray.muted"}
+                            >
+                              {step.replace(/_/g, " ")}
+                            </Text>
+                            {active && (
+                              <motion.div
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: i * 0.1 + 0.2 }}
+                              >
+                                <Text size="xsmall" color="surface.text.gray.muted">
+                                  Current state · {timeAgo(caseData.created_at)}
+                                </Text>
+                              </motion.div>
+                            )}
                           </Box>
                         </Box>
-                        <Box>
-                          <Text
-                            size="small"
-                            weight={active ? "semibold" : "regular"}
-                            color={reached ? "surface.text.gray.normal" : "surface.text.gray.muted"}
-                          >
-                            {step.replace(/_/g, " ")}
-                          </Text>
-                          {active && (
-                            <Text size="xsmall" color="surface.text.gray.muted">
-                              Current state · {timeAgo(caseData.created_at)}
-                            </Text>
-                          )}
-                        </Box>
-                      </Box>
+                      </motion.div>
                     );
                   })}
-                  {(caseData.status === "FAILED" || caseData.status === "BLOCKED" || caseData.status === "CLOSED") && (
-                    <Box display="flex" alignItems="center" gap="spacing.4" paddingY="spacing.3">
-                      <Box width="28px" height="28px" borderRadius="round" backgroundColor="feedback.background.negative.intense" display="flex" alignItems="center" justifyContent="center" flexShrink={0}>
-                        <X size={14} color="white" strokeWidth={3} />
+                  {(["FAILED", "BLOCKED", "CLOSED", "HUMAN_REVIEW"].includes(caseData.status)) && (
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: STATUS_STEPS.length * 0.1, duration: 0.3 }}
+                    >
+                      <Box display="flex" alignItems="center" gap="spacing.4" paddingY="spacing.3">
+                        <Box width="28px" height="28px" borderRadius="round" backgroundColor={caseData.status === "HUMAN_REVIEW" ? "feedback.background.notice.intense" : "feedback.background.negative.intense"} display="flex" alignItems="center" justifyContent="center" flexShrink={0}>
+                          <X size={14} color="white" strokeWidth={3} />
+                        </Box>
+                        <Text size="small" weight="semibold" color={caseData.status === "HUMAN_REVIEW" ? "feedback.text.notice.intense" : "feedback.text.negative.intense"}>{caseData.status.replace(/_/g, " ")}</Text>
                       </Box>
-                      <Text size="small" weight="semibold" color="feedback.text.negative.intense">{caseData.status}</Text>
-                    </Box>
+                    </motion.div>
                   )}
                 </Box>
               </Section>
@@ -260,30 +290,59 @@ export default function CaseDetailPage() {
               {caseData.audit_log && caseData.audit_log.length > 0 && (
                 <Section title="Audit Log">
                   <Box display="flex" flexDirection="column" gap="spacing.0">
-                    {[...caseData.audit_log].reverse().map((entry, i) => (
-                      <Box key={i}>
-                        {i > 0 && <Divider />}
-                        <Box paddingY="spacing.3">
-                          <Box display="flex" justifyContent="space-between" alignItems="flex-start">
-                            <Box>
-                              <Text size="small" weight="semibold">{entry.event || entry.node}</Text>
-                              {entry.decision && (
-                                <Text size="xsmall" color="surface.text.gray.muted">
-                                  Decision: {entry.decision} {entry.confidence !== undefined ? `(${(entry.confidence * 100).toFixed(0)}% confidence)` : ""}
+                    {[...caseData.audit_log].reverse().slice(auditPage * 8, (auditPage + 1) * 8).map((entry, i) => (
+                      <motion.div
+                        key={i}
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.1, duration: 0.3 }}
+                      >
+                        <Box>
+                          {i > 0 && <Divider />}
+                          <Box paddingY="spacing.3">
+                            <Box display="flex" justifyContent="space-between" alignItems="flex-start">
+                              <Box>
+                                <Text size="small" weight="semibold">{entry.event || entry.node}</Text>
+                                {entry.decision && (
+                                  <Text size="xsmall" color="surface.text.gray.muted">
+                                    Decision: {entry.decision} {entry.confidence !== undefined ? `(${(entry.confidence * 100).toFixed(0)}% confidence)` : ""}
+                                  </Text>
+                                )}
+                                {entry.decision_source && (
+                                  <Badge size="small" color="neutral" marginTop="spacing.1">{entry.decision_source}</Badge>
+                                )}
+                              </Box>
+                              <Text size="xsmall" color="surface.text.gray.muted">
+                                {entry.timestamp ? timeAgo(entry.timestamp) : ""}
                               </Text>
-                              )}
-                              {entry.decision_source && (
-                                <Badge size="small" color="neutral" marginTop="spacing.1">{entry.decision_source}</Badge>
+                            </Box>
+                          </Box>
+                        </Box>
+                      </motion.div>
+                    ))}
+                    
+                    {caseData.audit_log.length > 8 && (
+                      <Box display="flex" justifyContent="space-between" alignItems="center" marginTop="spacing.4" paddingTop="spacing.3" borderTopWidth="thin" borderTopColor="surface.border.gray.muted">
+                        <Button 
+                          variant="tertiary" 
+                          isDisabled={auditPage === 0} 
+                          onClick={() => setAuditPage(p => p - 1)}
+                        >
+                          Previous
+                        </Button>
+                        <Text size="xsmall" color="surface.text.gray.muted">
+                          Page {auditPage + 1} of {Math.ceil(caseData.audit_log.length / 8)}
+                        </Text>
+                        <Button 
+                          variant="tertiary" 
+                          isDisabled={(auditPage + 1) * 8 >= caseData.audit_log.length} 
+                          onClick={() => setAuditPage(p => p + 1)}
+                        >
+                          Next
+                        </Button>
+                      </Box>
                     )}
                   </Box>
-                            <Text size="xsmall" color="surface.text.gray.muted">
-                              {entry.timestamp ? timeAgo(entry.timestamp) : ""}
-                            </Text>
-                          </Box>
-                      </Box>
-                    </Box>
-                  ))}
-                </Box>
                 </Section>
               )}
               </Box>

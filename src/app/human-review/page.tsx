@@ -15,6 +15,7 @@ import {
   ModalHeader,
   ModalBody,
   ModalFooter,
+  Checkbox,
 } from "@razorpay/blade/components";
 import { CheckCircle } from "lucide-react";
 import AppShell from "@/components/AppShell";
@@ -47,6 +48,7 @@ export default function HumanReviewPage() {
   const [selected, setSelected] = useState<HumanReviewCase | null>(null);
   const [deciding, setDeciding] = useState(false);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const [simulateFailure, setSimulateFailure] = useState(false);
 
   const loadCases = useCallback(async () => {
     try {
@@ -76,18 +78,19 @@ export default function HumanReviewPage() {
     else setSelected(c);
   };
 
-  const handleDecision = async (decision: ReviewDecision) => {
+    const handleDecision = async (decision: ReviewDecision) => {
     if (!selected) return;
     setDeciding(true);
     try {
       const res = await fetch(API.caseReview(selected.case_id), {
         method: "POST",
         headers: { "Content-Type": "application/json", "X-API-Key": DEFAULT_API_KEY },
-        body: JSON.stringify({ decision, notes: `Human operator decision: ${decision}` }),
+        body: JSON.stringify({ action: decision, operator_id: "operator-1", notes: `Human operator decision: ${decision}`, simulate_failure: simulateFailure }),
       });
       if (!res.ok) throw new Error(`Decision failed: ${res.status}`);
       setSuccessMsg(`Case ${decision.toLowerCase()}d successfully.`);
       setSelected(null);
+      setSimulateFailure(false); // reset
       loadCases();
     } catch (e: any) {
       setError(e.message);
@@ -206,13 +209,23 @@ export default function HumanReviewPage() {
             </Box>
           </ModalBody>
           <ModalFooter>
-            <Box display="flex" gap="spacing.3" justifyContent="flex-end">
-              <Button variant="tertiary" onClick={() => setSelected(null)} isDisabled={deciding}>Cancel</Button>
-              <Button variant="secondary" color="negative" onClick={() => handleDecision("CLOSE")} isDisabled={deciding}>Close Case</Button>
-              <Button variant="secondary" color="negative" onClick={() => handleDecision("REJECT")} isDisabled={deciding}>Reject</Button>
-              <Button variant="primary" onClick={() => handleDecision("APPROVE")} isDisabled={deciding}>
-                {deciding ? "Processing..." : "Approve"}
-              </Button>
+            <Box display="flex" gap="spacing.3" justifyContent="space-between" alignItems="center" width="100%">
+              <Box>
+                <Checkbox
+                  isChecked={simulateFailure}
+                  onChange={({ isChecked }) => setSimulateFailure(isChecked)}
+                >
+                  Force Simulator Failure (Demo Retry Backoff)
+                </Checkbox>
+              </Box>
+              <Box display="flex" gap="spacing.3">
+                <Button variant="tertiary" onClick={() => setSelected(null)} isDisabled={deciding}>Cancel</Button>
+                <Button variant="secondary" color="negative" onClick={() => handleDecision("CLOSE")} isDisabled={deciding}>Close Case</Button>
+                <Button variant="secondary" color="negative" onClick={() => handleDecision("REJECT")} isDisabled={deciding}>Reject</Button>
+                <Button variant="primary" onClick={() => handleDecision("APPROVE")} isDisabled={deciding}>
+                  {deciding ? "Processing..." : "Approve"}
+                </Button>
+              </Box>
             </Box>
           </ModalFooter>
         </Modal>
