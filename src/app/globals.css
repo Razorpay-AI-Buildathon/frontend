@@ -1,36 +1,11 @@
 @import "tailwindcss";
 
-:root {
-  --background: #0B0A0F;
-  --foreground: #F4F2F7;
-  --plum-gray: #988EA2;
-  --accent-purple: #9035E9;
-  --accent-purple-light: #25163E;
-  --border-beige: #24222E;
-  --card-bg: #13111C;
-  --success-green: #10B981;
-  --warning-yellow: #F59E0B;
-  --error-red: #EF4444;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --color-plum: var(--plum-gray);
-  --color-accent: var(--accent-purple);
-  --color-accent-light: var(--accent-purple-light);
-  --color-border-beige: var(--border-beige);
-  --color-card-bg: var(--card-bg);
-  --color-success: var(--success-green);
-  --color-warning: var(--warning-yellow);
-  --color-error: var(--error-red);
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: ui-sans-serif, system-ui, sans-serif;
+  margin: 0;
+  padding: 0;
   overflow-x: hidden;
+  font-family: ui-sans-serif, system-ui, sans-serif;
+  /* Blade tokens handle coloring and layout from the AppShell downwards */
 }
 
 button,
@@ -41,36 +16,6 @@ input[type="button"],
 select,
 summary {
   cursor: pointer !important;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes scaleUp {
-  from {
-    opacity: 0;
-    transform: scale(0.98);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-.animate-fade-in {
-  animation: fadeIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-}
-
-.animate-scale-up {
-  animation: scaleUp 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
 }
 
 .custom-scrollbar::-webkit-scrollbar {
@@ -89,4 +34,16 @@ summary {
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
   background: var(--plum-gray);
+}
+
+.recovery-table-grid {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr 1.5fr 1.2fr; /* 5 columns on mobile */
+  align-items: center;
+}
+
+@media (min-width: 768px) {
+  .recovery-table-grid {
+    grid-template-columns: 2fr 1fr 1fr 1.5fr 1fr 1fr 1fr; /* 7 columns on desktop */
+  }
 }

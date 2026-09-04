@@ -6,7 +6,7 @@ RUN apk add --no-cache libc6-compat
 WORKDIR /app
 RUN npm install -g pnpm
 COPY package.json pnpm-lock.yaml* ./
-RUN pnpm install
+RUN pnpm install --ignore-scripts
 
 # Rebuild the source code only when needed
 FROM base AS builder
