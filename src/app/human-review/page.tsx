@@ -87,7 +87,14 @@ export default function HumanReviewPage() {
         headers: { "Content-Type": "application/json", "X-API-Key": DEFAULT_API_KEY },
         body: JSON.stringify({ action: decision, operator_id: "operator-1", notes: `Human operator decision: ${decision}`, simulate_failure: simulateFailure }),
       });
-      if (!res.ok) throw new Error(`Decision failed: ${res.status}`);
+      if (!res.ok) {
+        let errorMsg = `Decision failed: ${res.status}`;
+        try {
+          const errData = await res.json();
+          errorMsg = errData.detail || errorMsg;
+        } catch (e) {}
+        throw new Error(errorMsg);
+      }
       setSuccessMsg(`Case ${decision.toLowerCase()}d successfully.`);
       setSelected(null);
       setSimulateFailure(false); // reset
