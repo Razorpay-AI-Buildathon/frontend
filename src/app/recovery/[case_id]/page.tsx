@@ -119,99 +119,98 @@ export default function CaseDetailPage() {
         {error && <Alert color="negative" description={error} isFullWidth />}
 
         {caseData && (
-          <Box display="flex" flexDirection="column" gap="spacing.6">
-            {/* ── Recovery Timeline (Horizontal) ───────────────────────── */}
-            <Section title="Recovery Timeline">
-              <Box display="flex" flexDirection="row" justifyContent="space-between" alignItems="flex-start" overflow="auto" paddingY="spacing.4">
-                {STATUS_STEPS.map((step, i) => {
-                  const reached = currentStepIndex >= i;
-                  const active = currentStepIndex === i;
-                  const isTerminalException = ["FAILED", "BLOCKED", "CLOSED"].includes(caseData.status);
-                  const isWarning = caseData.status === "HUMAN_REVIEW";
-                  return (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: "24px", alignItems: "start" }}>
+              
+            {/* ── Left Column ───────────────────────────────── */}
+            <Box display="flex" flexDirection="column" gap="spacing.6">
+              {/* ── Recovery Timeline (Horizontal) ───────────────────────── */}
+              <Section title="Recovery Timeline">
+                <Box display="flex" flexDirection="row" justifyContent="space-between" alignItems="flex-start" overflow="auto" paddingY="spacing.4">
+                  {STATUS_STEPS.map((step, i) => {
+                    const reached = currentStepIndex >= i;
+                    const active = currentStepIndex === i;
+                    const isTerminalException = ["FAILED", "BLOCKED", "CLOSED"].includes(caseData.status);
+                    const isWarning = caseData.status === "HUMAN_REVIEW";
+                    return (
+                      <motion.div
+                        key={step}
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: i * 0.1, duration: 0.3 }}
+                        style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}
+                      >
+                        {i > 0 && (
+                          <div style={{ 
+                            position: 'absolute', top: '14px', left: '-50%', width: '100%', height: '2px', 
+                            backgroundColor: reached ? '#10b981' : '#e5e7eb', 
+                            zIndex: 0 
+                          }} />
+                        )}
+                        <Box
+                          width="28px"
+                          height="28px"
+                          borderRadius="round"
+                          display="flex"
+                          alignItems="center"
+                          justifyContent="center"
+                          backgroundColor={
+                            active && isTerminalException ? "feedback.background.negative.intense" :
+                            active && isWarning ? "feedback.background.notice.intense" :
+                            active ? "feedback.background.information.intense" :
+                            reached ? "feedback.background.positive.intense" :
+                            "surface.background.gray.intense"
+                          }
+                          flexShrink={0}
+                          zIndex={1}
+                        >
+                          <Box display="flex" alignItems="center" justifyContent="center">
+                            {reached ? (active ? <Circle size={12} fill="white" color="white" /> : <Check size={14} color="white" strokeWidth={3} />) : <Text size="xsmall" color="surface.text.staticWhite.normal" weight="semibold">{String(i + 1)}</Text>}
+                          </Box>
+                        </Box>
+                        <Box marginTop="spacing.3" textAlign="center">
+                          <Text
+                            size="xsmall"
+                            weight={active ? "semibold" : "regular"}
+                            color={reached ? "surface.text.gray.normal" : "surface.text.gray.muted"}
+                          >
+                            {step.replace(/_/g, " ")}
+                          </Text>
+                          {active && (
+                            <motion.div
+                              initial={{ opacity: 0 }}
+                              animate={{ opacity: 1 }}
+                              transition={{ delay: i * 0.1 + 0.2 }}
+                            >
+                              <Text size="xsmall" color="surface.text.gray.muted">
+                                Current state
+                              </Text>
+                            </motion.div>
+                          )}
+                        </Box>
+                      </motion.div>
+                    );
+                  })}
+                  {(["FAILED", "BLOCKED", "CLOSED", "HUMAN_REVIEW"].includes(caseData.status)) && (
                     <motion.div
-                      key={step}
                       initial={{ opacity: 0, y: -10 }}
                       animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: i * 0.1, duration: 0.3 }}
+                      transition={{ delay: STATUS_STEPS.length * 0.1, duration: 0.3 }}
                       style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}
                     >
-                      {i > 0 && (
-                        <div style={{ 
-                          position: 'absolute', top: '14px', left: '-50%', width: '100%', height: '2px', 
-                          backgroundColor: reached ? '#10b981' : '#e5e7eb', 
-                          zIndex: 0 
-                        }} />
-                      )}
-                      <Box
-                        width="28px"
-                        height="28px"
-                        borderRadius="round"
-                        display="flex"
-                        alignItems="center"
-                        justifyContent="center"
-                        backgroundColor={
-                          active && isTerminalException ? "feedback.background.negative.intense" :
-                          active && isWarning ? "feedback.background.notice.intense" :
-                          active ? "feedback.background.information.intense" :
-                          reached ? "feedback.background.positive.intense" :
-                          "surface.background.gray.intense"
-                        }
-                        flexShrink={0}
-                        zIndex={1}
-                      >
-                        <Box display="flex" alignItems="center" justifyContent="center">
-                          {reached ? (active ? <Circle size={12} fill="white" color="white" /> : <Check size={14} color="white" strokeWidth={3} />) : <Text size="xsmall" color="surface.text.staticWhite.normal" weight="semibold">{String(i + 1)}</Text>}
-                        </Box>
+                      <div style={{ position: 'absolute', top: '14px', left: '-50%', width: '100%', height: '2px', backgroundColor: caseData.status === "HUMAN_REVIEW" ? '#f59e0b' : '#ef4444', zIndex: 0 }} />
+                      <Box width="28px" height="28px" borderRadius="round" backgroundColor={caseData.status === "HUMAN_REVIEW" ? "feedback.background.notice.intense" : "feedback.background.negative.intense"} display="flex" alignItems="center" justifyContent="center" flexShrink={0} zIndex={1}>
+                        <X size={14} color="white" strokeWidth={3} />
                       </Box>
                       <Box marginTop="spacing.3" textAlign="center">
-                        <Text
-                          size="xsmall"
-                          weight={active ? "semibold" : "regular"}
-                          color={reached ? "surface.text.gray.normal" : "surface.text.gray.muted"}
-                        >
-                          {step.replace(/_/g, " ")}
-                        </Text>
-                        {active && (
-                          <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ delay: i * 0.1 + 0.2 }}
-                          >
-                            <Text size="xsmall" color="surface.text.gray.muted">
-                              Current state
-                            </Text>
-                          </motion.div>
-                        )}
+                        <Text size="xsmall" weight="semibold" color={caseData.status === "HUMAN_REVIEW" ? "feedback.text.notice.intense" : "feedback.text.negative.intense"}>{caseData.status.replace(/_/g, " ")}</Text>
                       </Box>
                     </motion.div>
-                  );
-                })}
-                {(["FAILED", "BLOCKED", "CLOSED", "HUMAN_REVIEW"].includes(caseData.status)) && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: STATUS_STEPS.length * 0.1, duration: 0.3 }}
-                    style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', position: 'relative' }}
-                  >
-                    <div style={{ position: 'absolute', top: '14px', left: '-50%', width: '100%', height: '2px', backgroundColor: caseData.status === "HUMAN_REVIEW" ? '#f59e0b' : '#ef4444', zIndex: 0 }} />
-                    <Box width="28px" height="28px" borderRadius="round" backgroundColor={caseData.status === "HUMAN_REVIEW" ? "feedback.background.notice.intense" : "feedback.background.negative.intense"} display="flex" alignItems="center" justifyContent="center" flexShrink={0} zIndex={1}>
-                      <X size={14} color="white" strokeWidth={3} />
-                    </Box>
-                    <Box marginTop="spacing.3" textAlign="center">
-                      <Text size="xsmall" weight="semibold" color={caseData.status === "HUMAN_REVIEW" ? "feedback.text.notice.intense" : "feedback.text.negative.intense"}>{caseData.status.replace(/_/g, " ")}</Text>
-                    </Box>
-                  </motion.div>
-                )}
-              </Box>
-            </Section>
+                  )}
+                </Box>
+              </Section>
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(400px, 1fr))", gap: "24px", alignItems: "start" }}>
-              
-              {/* ── Left Column ───────────────────────────────── */}
-              <Box display="flex" flexDirection="column" gap="spacing.6">
-                {/* ── Case Header ─────────────────────────────── */}
-                <Section title="Case">
+              {/* ── Case Header ─────────────────────────────── */}
+              <Section title="Case">
                   <Grid>
                     <Field label="Case ID" value={caseData.case_id} mono />
                     <Field label="Status" value={
