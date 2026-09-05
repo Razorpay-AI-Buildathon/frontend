@@ -356,7 +356,6 @@ export default function CaseDetailPage() {
                 )}
               </Box>
             </div>
-          </Box>
         )}
       </Box>
     </AppShell>
