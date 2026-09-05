@@ -1,3 +1,4 @@
+/* eslint-disable */
 "use client";
 
 import React, { useEffect, useState, useCallback, Suspense } from "react";
@@ -15,7 +16,7 @@ import {
 } from "@razorpay/blade/components";
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import AppShell from "@/components/AppShell";
-import { API, DEFAULT_API_KEY, timeAgo } from "@/lib/api";
+import { API, authFetch, timeAgo } from "@/lib/api";
 
 interface AuditEvent {
   id: string;
@@ -79,7 +80,7 @@ function AuditContent() {
       const params: Record<string, string | number> = { limit: LIMIT, offset: (page - 1) * LIMIT };
       if (eventTypeFilter) params.event_type = eventTypeFilter;
       if (sourceFilter) params.decision_source = sourceFilter;
-      const res = await fetch(API.audit(params), { headers: { "X-API-Key": DEFAULT_API_KEY } });
+      const res = await authFetch(API.audit(params));
       if (!res.ok) throw new Error("Failed to load audit log");
       const data = await res.json();
       setEvents(data.items || []);

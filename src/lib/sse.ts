@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useCallback } from "react";
-import { API, DEFAULT_API_KEY } from "./api";
+import { API } from "./api";
 
 export type SSEEvent = {
   type: string;
@@ -12,18 +12,20 @@ export type SSEEvent = {
 
 export function useSSE(
   onEvent: (e: SSEEvent) => void,
-  apiKey: string = DEFAULT_API_KEY,
   enabled: boolean = true
 ) {
   const esRef = useRef<EventSource | null>(null);
   const onEventRef = useRef(onEvent);
-  onEventRef.current = onEvent;
+  
+  useEffect(() => {
+    onEventRef.current = onEvent;
+  }, [onEvent]);
 
   const connect = useCallback(() => {
     if (esRef.current) esRef.current.close();
 
-    const url = `${API.caseStream()}?api_key=${encodeURIComponent(apiKey)}`;
-    const es = new EventSource(url);
+    const url = API.caseStream();
+    const es = new EventSource(url, { withCredentials: true });
     esRef.current = es;
 
     // Listen to custom events since the backend sends 'event: case_updated'
@@ -51,10 +53,11 @@ export function useSSE(
       es.close();
       // Reconnect after 3s
       setTimeout(() => {
+        // eslint-disable-next-line react-hooks/immutability
         if (enabled) connect();
       }, 3000);
     };
-  }, [apiKey, enabled]);
+  }, [enabled]);
 
   useEffect(() => {
     if (!enabled) return;

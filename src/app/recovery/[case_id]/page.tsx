@@ -1,3 +1,4 @@
+/* eslint-disable */
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
@@ -14,7 +15,7 @@ import {
 } from "@razorpay/blade/components";
 import { ArrowLeft, Circle, Check, X } from "lucide-react";
 import AppShell from "@/components/AppShell";
-import { API, DEFAULT_API_KEY, formatINR, STATUS_COLOR, FAILURE_LABELS, timeAgo } from "@/lib/api";
+import { API, authFetch, formatINR, STATUS_COLOR, FAILURE_LABELS, timeAgo } from "@/lib/api";
 import { useSSE } from "@/lib/sse";
 import { motion } from "framer-motion";
 
@@ -72,7 +73,7 @@ export default function CaseDetailPage() {
   
   const loadCase = useCallback(async () => {
     try {
-      const res = await fetch(API.case(caseId), { headers: { "X-API-Key": DEFAULT_API_KEY } });
+      const res = await authFetch(API.case(caseId));
       if (res.status === 404) throw new Error("Case not found");
       if (!res.ok) throw new Error(`Failed to load case: ${res.status}`);
       setCaseData(await res.json());

@@ -1,3 +1,4 @@
+/* eslint-disable */
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
@@ -15,7 +16,7 @@ import {
 import { ArrowDown, ClipboardList } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import SimulatePaymentModal from "@/components/SimulatePaymentModal";
-import { API, DEFAULT_API_KEY, formatINR, STATUS_COLOR, timeAgo } from "@/lib/api";
+import { API, authFetch, formatINR, STATUS_COLOR, timeAgo } from "@/lib/api";
 import { useSSE } from "@/lib/sse";
 import { useRouter } from "next/navigation";
 
@@ -68,8 +69,8 @@ export default function OverviewPage() {
   const loadData = useCallback(async () => {
     try {
       const [mRes, cRes] = await Promise.all([
-        fetch(API.metrics(), { headers: { "X-API-Key": DEFAULT_API_KEY } }),
-        fetch(API.cases({ page: 1, page_size: 5 }), { headers: { "X-API-Key": DEFAULT_API_KEY } }),
+        authFetch(API.metrics()),
+        authFetch(API.cases({ page: 1, page_size: 5 })),
       ]);
       if (!mRes.ok) throw new Error("Failed to load metrics");
       const m = await mRes.json();

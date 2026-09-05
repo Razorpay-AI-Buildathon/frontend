@@ -26,13 +26,17 @@ export const API = {
   checkoutFailed: () => `${API_BASE}/api/checkout/failed`,
 };
 
-export const DEFAULT_API_KEY = "RECOVERAI-TESTKEY-12345";
-
-export function apiHeaders(apiKey?: string) {
-  return {
-    "Content-Type": "application/json",
-    "X-API-Key": apiKey || DEFAULT_API_KEY,
-  };
+export async function authFetch(
+  url: string,
+  options: RequestInit = {}
+): Promise<Response> {
+  return fetch(url, {
+    ...options,
+    credentials: "include",
+    headers: {
+      ...(options.headers || {}),
+    },
+  });
 }
 
 export function formatINR(amount: number | string): string {

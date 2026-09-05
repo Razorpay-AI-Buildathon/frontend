@@ -14,7 +14,7 @@ import {
 } from "@razorpay/blade/components";
 import { LayoutDashboard, ClipboardList, Zap, CheckCircle, X, UserCheck, Target, TrendingUp, Search } from "lucide-react";
 import { logout } from "@/lib/auth";
-import { API, DEFAULT_API_KEY } from "@/lib/api";
+import { API, authFetch } from "@/lib/api";
 
 interface GatewayStatus {
   mode?: string;
@@ -46,7 +46,7 @@ export default function Sidebar({
   const [gatewayStatus, setGatewayStatus] = useState<GatewayStatus>({});
 
   useEffect(() => {
-    fetch(API.metrics(), { headers: { "X-API-Key": DEFAULT_API_KEY } })
+    authFetch(API.metrics())
       .then((r) => r.ok ? r.json() : null)
       .then((d) => {
         if (d?.gateway_mode) setGatewayStatus({ mode: d.gateway_mode, environment: d.environment || "DEMO", health: "HEALTHY" });
