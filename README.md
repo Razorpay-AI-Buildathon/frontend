@@ -14,6 +14,12 @@ Next.js-based real-time observability dashboard for tracking payment recovery ca
 - Node.js (v20 or higher)
 - pnpm (v9 or higher)
 
+### Environment Variables
+Create a `.env.local` file in the root directory:
+```env
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
 ### Setup & Run
 1. Install dependencies:
    ```bash
@@ -23,7 +29,13 @@ Next.js-based real-time observability dashboard for tracking payment recovery ca
    ```bash
    pnpm run dev
    ```
-3. Open [http://localhost:3000](http://localhost:3000) and enter `RECOVERAI-TESTKEY-12345` as the Server API Key to unlock cases.
+3. Open [http://localhost:3000](http://localhost:3000) and enter `RECOVERAI-TESTKEY-12345` as the Server API Key to unlock cases (or login via Google OAuth if configured).
+
+### Architecture & Connections
+The frontend connects directly to the **RecoverAI Backend Engine** (`http://localhost:8000`) for:
+- Fetching aggregated metrics and real-time case data
+- Submitting ActionGuard human overrides
+- Listening to Server-Sent Events (SSE) for real-time dashboard updates
 
 ## User Interface Flow
 
